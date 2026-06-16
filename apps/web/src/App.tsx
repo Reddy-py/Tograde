@@ -273,7 +273,7 @@ function App() {
             <button 
             type="button" 
             className="primary-button"
-            onClick={() => alert("Add Student feature coming soon")}>
+            onClick={() => handleModuleSelect("students")}>
               Add Student
             </button>
             <button type="button" className="secondary-button">
