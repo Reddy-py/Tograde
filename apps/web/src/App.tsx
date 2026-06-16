@@ -17,7 +17,7 @@ import type {
   ModuleKey,
   Student,
   Teacher
-} from "@topgrade/shared";
+} from "../../../packages/shared/src";
 
 import { fetchBootstrap } from "./lib/api";
 import { hasSupabaseBrowserConfig } from "./lib/supabase";
@@ -172,7 +172,7 @@ function App() {
     return () => controller.abort();
   }, []);
 
-  const counts = !data
+  const counts: Record<ModuleKey, string> = !data
     ? {
         dashboard: "Loading",
         students: "0",
@@ -270,7 +270,10 @@ function App() {
           </div>
 
           <div className="hero-actions">
-            <button type="button" className="primary-button">
+            <button 
+            type="button" 
+            className="primary-button"
+            onClick={() => alert("Add Student feature coming soon")}>
               Add Student
             </button>
             <button type="button" className="secondary-button">
@@ -294,7 +297,13 @@ function App() {
         {data && (
           <>
             <section className="kpi-grid" id="dashboard">
-              {data.dashboard.kpis.map((kpi) => (
+              {data.dashboard.kpis.map((kpi: {
+                id: string;
+                label: string;
+                value: string;
+                trend: string;
+                tone: "positive" | "neutral" | "warning";
+              }) => (
                 <MetricCard
                   key={kpi.id}
                   label={kpi.label}
@@ -314,16 +323,24 @@ function App() {
                 >
                   <div className="split-grid">
                     <div className="activity-stack">
-                      {data.dashboard.recentActivities.map((item) => (
-                        <article key={item.id} className="activity-item">
-                          <p className="activity-title">{item.title}</p>
-                          <p className="muted-copy">{item.detail}</p>
-                          <div className="activity-footer">
-                            <span className="tag">{item.module}</span>
-                            <small>{item.timestamp}</small>
-                          </div>
-                        </article>
-                      ))}
+                      {data.dashboard.recentActivities.map(
+                        (item: {
+                          id: string;
+                          title: string;
+                          detail: string;
+                          module: string;
+                          timestamp: string;
+                        }) => (
+                          <article key={item.id} className="activity-item">
+                            <p className="activity-title">{item.title}</p>
+                            <p className="muted-copy">{item.detail}</p>
+                            <div className="activity-footer">
+                              <span className="tag">{item.module}</span>
+                              <small>{item.timestamp}</small>
+                            </div>
+                          </article>
+                        )
+                      )}
                     </div>
 
                     <div className="stack">
@@ -343,17 +360,24 @@ function App() {
                       </div>
 
                       <div className="quick-actions">
-                        {data.dashboard.quickActions.map((action) => (
-                          <button
-                            key={action.id}
-                            type="button"
-                            className="quick-action-card"
-                            onClick={() => handleModuleSelect(action.module)}
-                          >
-                            <strong>{action.label}</strong>
-                            <span>{action.description}</span>
-                          </button>
-                        ))}
+                        {data.dashboard.quickActions.map(
+                          (action: {
+                            id: string;
+                            module: ModuleKey;
+                            label: string;
+                            description: string;
+                          }) => (
+                            <button
+                              key={action.id}
+                              type="button"
+                              className="quick-action-card"
+                              onClick={() => handleModuleSelect(action.module)}
+                            >
+                              <strong>{action.label}</strong>
+                              <span>{action.description}</span>
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -580,7 +604,7 @@ function StudentList({ students }: { students: Student[] }) {
         <article key={student.id} className="record-card">
           <div className="record-topline">
             <strong>{student.fullName}</strong>
-            <span className={`status-pill ${statusClassMap[student.status]}`}>
+            <span className={`status-pill ${statusClassMap[student.status as keyof typeof statusClassMap]}`}>
               {student.status}
             </span>
           </div>
@@ -646,7 +670,7 @@ function CourseList({ courses }: { courses: Course[] }) {
 function ScheduleList({ schedule }: { schedule: BootstrapPayload["schedule"] }) {
   return (
     <div className="stack">
-      {schedule.map((slot) => (
+      {schedule.map((slot: BootstrapPayload["schedule"][number]) => (
         <article key={slot.id} className="timeline-card">
           <div>
             <strong>
@@ -677,7 +701,7 @@ function AttendanceList({
         <article key={record.id} className="record-card">
           <div className="record-topline">
             <strong>{record.studentName}</strong>
-            <span className={`status-pill ${statusClassMap[record.status]}`}>
+            <span className={`status-pill ${statusClassMap[record.status as keyof typeof statusClassMap]}`}>
               {record.status}
             </span>
           </div>
@@ -714,7 +738,7 @@ function FinancePanel({ finance }: { finance: FinanceSummary }) {
       </div>
 
       <div className="trend-bars">
-        {finance.monthlyTrend.map((value, index) => (
+        {finance.monthlyTrend.map((value: number, index: number) => (
           <div key={`${value}-${index}`} className="trend-column">
             <span
               className="trend-bar"
@@ -726,11 +750,11 @@ function FinancePanel({ finance }: { finance: FinanceSummary }) {
       </div>
 
       <div className="stack">
-        {finance.invoices.map((invoice) => (
+        {finance.invoices.map((invoice: FinanceSummary["invoices"][number]) => (
           <article key={invoice.id} className="record-card">
             <div className="record-topline">
               <strong>{invoice.studentName}</strong>
-              <span className={`status-pill ${statusClassMap[invoice.status]}`}>
+              <span className={`status-pill ${statusClassMap[invoice.status as keyof typeof statusClassMap]}`}>
                 {invoice.status}
               </span>
             </div>
@@ -752,7 +776,7 @@ function AutomationList({ automations }: { automations: Automation[] }) {
         <article key={automation.id} className="record-card">
           <div className="record-topline">
             <strong>{automation.name}</strong>
-            <span className={`status-pill ${statusClassMap[automation.status]}`}>
+            <span className={`status-pill ${statusClassMap[automation.status as keyof typeof statusClassMap]}`}>
               {automation.status}
             </span>
           </div>
@@ -776,7 +800,7 @@ function AlertsList({ alerts }: { alerts: FeeAlert[] }) {
         <article key={alert.id} className="record-card">
           <div className="record-topline">
             <strong>{alert.studentName}</strong>
-            <span className={`status-pill ${statusClassMap[alert.severity]}`}>
+            <span className={`status-pill ${statusClassMap[alert.severity as keyof typeof statusClassMap]}`}>
               {alert.severity}
             </span>
           </div>
@@ -838,22 +862,22 @@ function FocusedModule({
     case "students":
       return (
         <p className="muted-copy">
-          {data.students.filter((student) => student.balanceDue > 0).length}{" "}
+          {data.students.filter((student: Student) => student.balanceDue > 0).length}{" "}
           students currently have an outstanding balance, and{" "}
-          {data.students.filter((student) => student.status === "trial").length}{" "}
+          {data.students.filter((student: Student) => student.status === "trial").length}{" "}
           are in trial mode.
         </p>
       );
     case "teachers":
       return (
         <p className="muted-copy">
-          The team is carrying {data.teachers.reduce((sum, teacher) => sum + teacher.assignedStudents, 0)} active student assignments across {data.teachers.length} teachers.
+          The team is carrying {data.teachers.reduce<number>((sum: number, teacher: Teacher) => sum + teacher.assignedStudents, 0)} active student assignments across {data.teachers.length} teachers.
         </p>
       );
     case "courses":
       return (
         <p className="muted-copy">
-          {data.courses.filter((course) => course.enrolledStudents >= course.weeklyCapacity - 2).length} programs are close to full and good candidates for new batch creation.
+          {data.courses.filter((course: Course) => course.enrolledStudents >= course.weeklyCapacity - 2).length} programs are close to full and good candidates for new batch creation.
         </p>
       );
     case "schedule":
@@ -865,7 +889,7 @@ function FocusedModule({
     case "attendance":
       return (
         <p className="muted-copy">
-          {data.attendance.filter((record) => record.status === "present").length} of{" "}
+          {data.attendance.filter((record: AttendanceRecord) => record.status === "present").length} of{" "}
           {data.attendance.length} recent records are marked present.
         </p>
       );
@@ -881,13 +905,13 @@ function FocusedModule({
     case "automation":
       return (
         <p className="muted-copy">
-          {data.automations.filter((automation) => automation.status === "live").length} automation flows are live, with WhatsApp-ready expansion modeled in the UI.
+          {data.automations.filter((automation: Automation) => automation.status === "live").length} automation flows are live, with WhatsApp-ready expansion modeled in the UI.
         </p>
       );
     case "alerts":
       return (
         <p className="muted-copy">
-          {data.alerts.filter((alert) => alert.severity === "overdue").length} alerts are overdue and should trigger a higher-touch follow-up path.
+          {data.alerts.filter((alert: FeeAlert) => alert.severity === "overdue").length} alerts are overdue and should trigger a higher-touch follow-up path.
         </p>
       );
     case "history":
