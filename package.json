@@ -1,0 +1,15 @@
+{
+  "name": "topgrade-learning-crm",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @topgrade/web run dev",
+    "dev:api": "npm --workspace @topgrade/api run dev",
+    "build": "npm run build --workspace @topgrade/shared && npm run build --workspace @topgrade/api && npm run build --workspace @topgrade/web",
+    "typecheck": "npm run build --workspace @topgrade/shared && npm run typecheck --workspace @topgrade/api && npm run typecheck --workspace @topgrade/web"
+  }
+}
