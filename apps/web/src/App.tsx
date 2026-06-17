@@ -19,7 +19,12 @@ import type {
   Teacher
 } from "../../../packages/shared/src";
 
-import { fetchBootstrap } from "./lib/api";
+import { 
+  fetchBootstrap,
+  createStudent,
+  updateStudent,
+  deleteStudent
+ } from "./lib/api";
 import { hasSupabaseBrowserConfig } from "./lib/supabase";
 
 const moduleOrder: Array<{ key: ModuleKey; label: string; accent: string }> = [
@@ -141,11 +146,40 @@ const statusClassMap = {
 } as const;
 
 function App() {
+  const [studentForm, setStudentForm] = useState({
+  name: "",
+  grade: "",
+  program: "",
+  parent: "",
+  phone: "",
+  email: ""
+});
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleKey>("dashboard");
   const [data, setData] = useState<BootstrapPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [editingStudent, setEditingStudent] =
+  useState<Student | null>(null);
+
+  const onEdit = (student: Student) => {
+  setEditingStudent(student);
+
+  setStudentForm({
+    name: student.fullName,
+    grade: student.grade,
+    program: student.program,
+    parent: student.guardian.fullName,
+    phone: student.guardian.phone,
+    email: student.guardian.email
+  });
+
+  setShowStudentModal(true);
+};
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -171,6 +205,11 @@ function App() {
 
     return () => controller.abort();
   }, []);
+
+  const filteredStudents =
+    data?.students.filter((student) =>
+      student.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+    ) ?? [];
 
   const counts: Record<ModuleKey, string> = !data
     ? {
@@ -260,6 +299,7 @@ function App() {
       </aside>
 
       <main className="main-content">
+        <p>Modal State: {showStudentModal ? "OPEN" : "CLOSED"}</p>
         <header className="hero">
           <div>
             <p className="eyebrow">{moduleNarratives[activeModule].eyebrow}</p>
@@ -273,8 +313,11 @@ function App() {
             <button 
             type="button" 
             className="primary-button"
-            onClick={() => handleModuleSelect("students")}>
-              Add Student
+            onClick={() => {
+              setShowStudentModal(true);
+              console.log("Modal state should open");
+            }}>
+              Add Student 
             </button>
             <button type="button" className="secondary-button">
               Generate Invoice
@@ -389,7 +432,20 @@ function App() {
                     title="Students"
                     subtitle="Current learners, guardian details, schedules, and balances."
                   >
-                    <StudentList students={data.students} />
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Search students..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      <StudentList
+                        students={filteredStudents}
+                        onEdit={onEdit}
+                        setData={setData}
+                      />
+                    </div>
+
                   </Panel>
 
                   <Panel
@@ -496,6 +552,149 @@ function App() {
             </div>
           </>
         )}
+        {showStudentModal && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>
+        {editingStudent ? "Edit Student" : "Add Student"}
+      </h2>
+
+      <input
+       placeholder="Student Name"
+       value={studentForm.name}
+       onChange={(e) => 
+        setStudentForm({...studentForm, name: e.target.value})
+      }
+      />
+      <input
+       placeholder="Grade"
+       value={studentForm.grade}
+       onChange={(e) => 
+        setStudentForm({...studentForm, grade: e.target.value})
+      }
+      />
+      <input
+       placeholder="Program"
+       value={studentForm.program}
+       onChange={(e) => 
+        setStudentForm({...studentForm, program: e.target.value})
+      }
+      />
+      <input
+       placeholder="Parent Name"
+       value={studentForm.parent}
+       onChange={(e) => 
+        setStudentForm({...studentForm, parent: e.target.value})
+      }
+      />
+      <input
+       placeholder="Phone"
+       value={studentForm.phone}
+       onChange={(e) => 
+        setStudentForm({...studentForm, phone: e.target.value})
+      }
+      />
+      <input
+       placeholder="Email"
+       value={studentForm.email}
+       onChange={(e) => 
+        setStudentForm({...studentForm, email: e.target.value})
+      }
+      />
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          onClick={() => setShowStudentModal(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={async () => {
+            if (!data) return;
+
+            const newStudent = {
+              id: crypto.randomUUID(),
+              fullName: studentForm.name,
+              status: "active",
+              grade: studentForm.grade,
+              program: studentForm.program,
+              weeklySchedule: "Not assigned",
+              guardian: {
+                id: crypto.randomUUID(),
+                fullName: studentForm.parent,
+                email: studentForm.email,
+                phone: studentForm.phone
+              },
+              notes: "",
+              balanceDue: 0
+            };
+
+            try {
+              console.log("Student being sent:", newStudent);
+
+              if (editingStudent) {
+                const updatedStudent = {
+                  ...editingStudent,
+                  fullName: studentForm.name,
+                  grade: studentForm.grade,
+                  program: studentForm.program,
+                  guardian: {
+                    ...editingStudent.guardian,
+                    fullName: studentForm.parent,
+                    phone: studentForm.phone,
+                    email: studentForm.email
+                  }
+                };
+
+                await updateStudent(
+                  updatedStudent.id,
+                  updatedStudent
+                );
+
+                setData({
+                  ...data,
+                  students: data.students.map((s) =>
+                    s.id === updatedStudent.id
+                      ? updatedStudent
+                      : s
+                  )
+                });
+
+                setEditingStudent(null);
+              } else {
+                const savedStudent = await createStudent(newStudent);
+
+                setData({
+                  ...data,
+                  students: [savedStudent, ...data.students]
+                });
+              }
+
+              setShowStudentModal(false);
+
+              setStudentForm({
+                name: "",
+                grade: "",
+                program: "",
+                parent: "",
+                phone: "",
+                email: ""
+              });
+            } catch (error) {
+              console.error(error);
+              alert("Failed to save student");
+            }
+          }}
+        >
+          {editingStudent ? "Update Student" : "Save Student"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       </main>
     </div>
   );
@@ -597,7 +796,17 @@ function Panel({
   );
 }
 
-function StudentList({ students }: { students: Student[] }) {
+function StudentList({
+  students,
+  onEdit,
+  setData
+}: {
+  students: Student[];
+  onEdit: (student: Student) => void;
+  setData: React.Dispatch<React.SetStateAction<BootstrapPayload | null>>;
+}) {
+  console.log("Student IDs:", students.map((s) => s.id));
+
   return (
     <div className="stack">
       {students.map((student) => (
@@ -616,8 +825,34 @@ function StudentList({ students }: { students: Student[] }) {
           </p>
           <div className="record-footer">
             <small>{student.notes}</small>
-            <strong>{currencyFormatter.format(student.balanceDue)}</strong>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => onEdit(student)}
+            >
+                Edit
+            </button>
+            
+          <button
+            type="button"
+            onClick={async () => {
+              if (!confirm(`Delete ${student.fullName}?`)) {
+                return;
+              }
+
+              await deleteStudent(student.id);
+
+            }}
+          >
+            Delete
+          </button>
+
+            <strong>
+              {currencyFormatter.format(student.balanceDue)}
+            </strong>
           </div>
+        </div>
         </article>
       ))}
     </div>

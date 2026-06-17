@@ -1,15 +1,96 @@
-import type {
-  AlertSeverity,
-  BootstrapPayload,
-  Course,
-  FeeAlert,
-  ScheduleSlot,
-  Student,
-  Teacher
-} from "@topgrade/shared";
-
 import { mockBootstrap } from "../data/mock-data";
 import { getSupabaseClient, isSupabaseConfigured } from "../lib/supabase";
+
+type AlertSeverity = string;
+
+interface Guardian {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+interface Student {
+  id: string;
+  fullName: string;
+  status: string;
+  grade: string;
+  program: string;
+  weeklySchedule: string;
+  guardian: Guardian;
+  notes: string;
+  balanceDue: number;
+}
+
+interface Teacher {
+  id: string;
+  fullName: string;
+  expertise: string;
+  availability: string;
+  assignedCourses: number;
+  assignedStudents: number;
+}
+
+interface Course {
+  id: string;
+  title: string;
+  category: string;
+  weeklyCapacity: number;
+  leadTeacher: string;
+  enrolledStudents: number;
+  location: string;
+}
+
+interface ScheduleSlot {
+  id: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+  course: string;
+  teacher: string;
+  room: string;
+  studentCount: number;
+}
+
+interface FeeAlert {
+  id: string;
+  studentName: string;
+  guardianName: string;
+  amountDue: number;
+  dueDate: string;
+  severity: AlertSeverity;
+  channel: string;
+}
+
+interface DashboardKpi {
+  id: string;
+  label: string;
+  value: string;
+  trend: string;
+  tone: "positive" | "neutral" | "warning";
+}
+
+interface FeeHealth {
+  overdueTotal: number;
+  dueThisWeek: number;
+  collectionRate: number;
+}
+
+interface BootstrapPayload {
+  students: Student[];
+  teachers: Teacher[];
+  courses: Course[];
+  schedule: ScheduleSlot[];
+  alerts: FeeAlert[];
+  attendance: unknown;
+  finance: unknown;
+  automations: unknown;
+  history: unknown;
+  dashboard: {
+    kpis: DashboardKpi[];
+    feeHealth: FeeHealth;
+  };
+}
 
 interface StudentDirectoryRow {
   id: string;
@@ -65,15 +146,21 @@ interface FeeAlertOverviewRow {
   channel: FeeAlert["channel"];
 }
 
+// structuredClone(mockBootstrap) may come from a different package copy of types
+// and cause incompatible type errors (e.g. string vs number). Cast through
+// unknown to force our local BootstrapPayload type.
 const cloneBootstrap = (): BootstrapPayload =>
-  globalThis.structuredClone(mockBootstrap);
+  globalThis.structuredClone(mockBootstrap) as unknown as BootstrapPayload;
+
+// In-memory student store used when Supabase is not configured or for quick additions
+let studentsData: Student[] = cloneBootstrap().students.slice();
 
 const buildDashboardKpis = (payload: BootstrapPayload) => [
   {
     id: "students",
     label: "Active Students",
     value: String(
-      payload.students.filter((student) => student.status === "active").length
+      payload.students.filter((student: Student) => student.status === "active").length
     ),
     trend: `${payload.students.length} total learner records`,
     tone: "positive" as const
@@ -96,8 +183,8 @@ const buildDashboardKpis = (payload: BootstrapPayload) => [
     id: "alerts",
     label: "Open Fee Alerts",
     value: String(payload.alerts.length),
-    trend: `${payload.alerts.filter((alert) => alert.severity === "overdue").length} overdue`,
-    tone: payload.alerts.some((alert) => alert.severity === "overdue")
+    trend: `${payload.alerts.filter((alert: FeeAlert) => alert.severity === "overdue").length} overdue`,
+    tone: payload.alerts.some((alert: FeeAlert) => alert.severity === "overdue")
       ? ("warning" as const)
       : ("neutral" as const)
   }
@@ -166,7 +253,10 @@ const mapAlerts = (rows: FeeAlertOverviewRow[]): FeeAlert[] =>
   }));
 
 export const getBootstrap = async (): Promise<BootstrapPayload> => {
+  console.log("Supabase configured:", isSupabaseConfigured());
   const payload = cloneBootstrap();
+  
+  payload.students = studentsData;
 
   if (!isSupabaseConfigured()) {
     return payload;
@@ -213,11 +303,11 @@ export const getBootstrap = async (): Promise<BootstrapPayload> => {
     payload.dashboard.kpis = buildDashboardKpis(payload);
     payload.dashboard.feeHealth = {
       overdueTotal: payload.alerts
-        .filter((alert) => alert.severity === "overdue")
-        .reduce((sum, alert) => sum + alert.amountDue, 0),
+        .filter((alert: FeeAlert) => alert.severity === "overdue")
+        .reduce((sum: number, alert: FeeAlert) => sum + alert.amountDue, 0),
       dueThisWeek: payload.alerts
-        .filter((alert) => alert.severity !== "overdue")
-        .reduce((sum, alert) => sum + alert.amountDue, 0),
+        .filter((alert: FeeAlert) => alert.severity !== "overdue")
+        .reduce((sum: number, alert: FeeAlert) => sum + alert.amountDue, 0),
       collectionRate: payload.dashboard.feeHealth.collectionRate
     };
   } catch (error) {
@@ -227,7 +317,103 @@ export const getBootstrap = async (): Promise<BootstrapPayload> => {
   return payload;
 };
 
-export const getStudents = async () => (await getBootstrap()).students;
+export const addStudent = async (student: Student) => {
+  const supabase = getSupabaseClient();
+
+
+
+  if (!supabase) {
+    studentsData.push(student);
+    return student;
+  }
+  const { error } = await supabase
+    .from("student_directory")
+    .insert([
+      {
+        id: student.id,
+        full_name: student.fullName,
+        status: student.status,
+        grade: student.grade,
+        primary_program: student.program,
+        days_per_week: student.weeklySchedule,
+        guardian_name: student.guardian.fullName,
+        guardian_email: student.guardian.email,
+        guardian_phone: student.guardian.phone,
+        notes: student.notes,
+        balance_due: student.balanceDue
+      }
+    ] as any);
+
+  if (error) {
+    console.error("Supabase insert error:", error);
+    throw error;
+  }
+
+  return student;
+};
+
+export const updateStudent = async (
+  id: string,
+  student: Student
+) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    const index = studentsData.findIndex(
+      (s) => s.id === id
+    );
+
+    if (index !== -1) {
+      studentsData[index] = student;
+    }
+
+    return student;
+  }
+
+  const { error } = await (supabase as any)
+    .from("student_directory")
+    .update({
+      full_name: student.fullName,
+      status: student.status,
+      grade: student.grade,
+      primary_program: student.program,
+      days_per_week: student.weeklySchedule,
+      guardian_name: student.guardian.fullName,
+      guardian_email: student.guardian.email,
+      guardian_phone: student.guardian.phone,
+      notes: student.notes,
+      balance_due: student.balanceDue
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Supabase update error:", error);
+    throw error;
+  }
+
+  return student;
+};
+
+export const deleteStudent = async (id: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    studentsData = studentsData.filter(
+      (s) => s.id !== id
+    );
+
+    return;
+  }
+
+  const { error } = await supabase
+    .from("student_directory")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+};
+
+export const getStudents = async () => studentsData;
 export const getTeachers = async () => (await getBootstrap()).teachers;
 export const getCourses = async () => (await getBootstrap()).courses;
 export const getSchedule = async () => (await getBootstrap()).schedule;

@@ -1,6 +1,6 @@
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
-
+import { updateStudent } from "./services/crm-service";
 import { config } from "./config";
 import {
   getAlerts,
@@ -12,7 +12,9 @@ import {
   getHistory,
   getSchedule,
   getStudents,
-  getTeachers
+  getTeachers,
+  addStudent,
+  deleteStudent,
 } from "./services/crm-service";
 
 const asyncHandler =
@@ -50,6 +52,48 @@ app.get(
     response.json(await getStudents());
   })
 );
+
+app.post(
+  "/api/students",
+  asyncHandler(async (request, response) => {
+    const student = await addStudent(request.body);
+
+    response.status(201).json(student);
+  })
+);
+
+app.put(
+  "/api/students/:id",
+  asyncHandler(async (request, response) => {
+    const { id } = request.params;
+
+    if (Array.isArray(id)) {
+      throw new Error("Invalid student id");
+    }
+
+    const student = await updateStudent(id, request.body);
+
+    response.json(student);
+  })
+);
+
+app.delete(
+  "/api/students/:id",
+  asyncHandler(async (request, response) => {
+    const { id } = request.params;
+
+    if (Array.isArray(id)) {
+      throw new Error("Invalid student id");
+    }
+
+    await deleteStudent(id);
+
+    response.json({
+      success: true
+    });
+  })
+);
+
 
 app.get(
   "/api/teachers",
