@@ -413,7 +413,10 @@ export const deleteStudent = async (id: string) => {
   if (error) throw error;
 };
 
-export const getStudents = async () => studentsData;
+export const getStudents = async () => {
+  const payload = await getBootstrap();
+  return payload.students;
+};
 export const getTeachers = async () => (await getBootstrap()).teachers;
 export const getCourses = async () => (await getBootstrap()).courses;
 export const getSchedule = async () => (await getBootstrap()).schedule;
