@@ -11,10 +11,10 @@ export const config = {
   port: parsePort(process.env.PORT, 4000),
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
   supabaseUrl:
-process.env.NEXT_PUBLIC_SUPABASE_URL,
+process.env.SUPABASE_URL,
 
 supabaseServiceRoleKey:
-process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+process.env.SUPABASE_SERVICE_ROLE_KEY,
   awsRegion: process.env.AWS_REGION ?? "ap-south-1",
   awsSesFromEmail: process.env.AWS_SES_FROM_EMAIL,
   awsReportsBucket: process.env.AWS_REPORTS_BUCKET
