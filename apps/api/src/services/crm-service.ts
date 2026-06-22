@@ -417,6 +417,44 @@ export const getStudents = async () => {
   const payload = await getBootstrap();
   return payload.students;
 };
+
+export const getFees = async () => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("fee_management")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+export const addFee = async (fee: any) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return fee;
+  }
+
+  const { error } = await supabase
+    .from("fee_management")
+    .insert([fee]);
+
+  if (error) {
+    throw error;
+  }
+
+  return fee;
+};
+
 export const getTeachers = async () => (await getBootstrap()).teachers;
 export const getCourses = async () => (await getBootstrap()).courses;
 export const getSchedule = async () => (await getBootstrap()).schedule;

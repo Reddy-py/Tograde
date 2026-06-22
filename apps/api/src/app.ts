@@ -15,6 +15,8 @@ import {
   getTeachers,
   addStudent,
   deleteStudent,
+  getFees,
+  addFee
 } from "./services/crm-service";
 
 const asyncHandler =
@@ -94,6 +96,21 @@ app.delete(
   })
 );
 
+app.get(
+  "/api/fees",
+  asyncHandler(async (_request, response) => {
+    response.json(await getFees());
+  })
+);
+
+app.post(
+  "/api/fees",
+  asyncHandler(async (request, response) => {
+    const fee = await addFee(request.body);
+
+    response.status(201).json(fee);
+  })
+);
 
 app.get(
   "/api/teachers",
