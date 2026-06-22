@@ -446,7 +446,7 @@ export const addFee = async (fee: any) => {
 
   const { error } = await supabase
     .from("fee_management")
-    .insert([fee]);
+    .insert([fee] as any);
 
   if (error) {
     throw error;
