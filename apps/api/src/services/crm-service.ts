@@ -267,38 +267,29 @@ export const getBootstrap = async (): Promise<BootstrapPayload> => {
   }
 
   try {
-    const [
-  studentsResult,
-  teachersResult,
-  coursesResult,
-  scheduleResult,
-  alertsResult,
-  attendanceResult,
-  paymentsResult
-] = await Promise.all([
-  supabase.from("student_directory").select("*").order("full_name"),
-  supabase.from("teacher_directory").select("*").order("full_name"),
-  supabase.from("course_catalog").select("*").order("title"),
-  supabase.from("schedule_overview").select("*"),
-  supabase.from("fee_alert_overview").select("*"),
-  supabase.from("attendance").select("*"),
-  supabase.from("payments").select("*")
-]);
+    const [studentsResult, teachersResult, coursesResult, scheduleResult, alertsResult] =
+      await Promise.all([
+        supabase.from("student_directory").select("*").order("full_name"),
+        supabase.from("teacher_directory").select("*").order("full_name"),
+        supabase.from("course_catalog").select("*").order("title"),
+        supabase.from("schedule_overview").select("*"),
+        supabase.from("fee_alert_overview").select("*")
+      ]);
+
     if (!studentsResult.error && studentsResult.data?.length) {
       payload.students = mapStudents(studentsResult.data as StudentDirectoryRow[]);
       const feesResult = await supabase
         .from("fee_management")
         .select("*");
 
-        if (!feesResult.error && feesResult.data) {
-          const feesArray = feesResult.data as any[];
-          const totalDue = feesArray.reduce(
-            (sum, fee) => sum + Number(fee?.due_fee || 0),
-            0
-          );
+      if (!feesResult.error && feesResult.data) {
+        const totalDue = (feesResult.data as { due_fee?: number | null }[]).reduce(
+          (sum, fee) => sum + Number(fee.due_fee || 0),
+          0
+        );
 
-          payload.dashboard.feeHealth.overdueTotal = totalDue;
-        }
+        payload.dashboard.feeHealth.overdueTotal = totalDue;
+      }
     }
 
     if (!teachersResult.error && teachersResult.data?.length) {
@@ -318,25 +309,6 @@ export const getBootstrap = async (): Promise<BootstrapPayload> => {
     if (!alertsResult.error && alertsResult.data?.length) {
       payload.alerts = mapAlerts(alertsResult.data as FeeAlertOverviewRow[]);
     }
-
-    if (!attendanceResult.error && attendanceResult.data?.length) {
-  payload.attendance = attendanceResult.data.map((row: any) => ({
-    id: row.id,
-    studentName: row.student_name,
-    date: row.attendance_date,
-    status: row.status
-  }));
-
-    if (!paymentsResult.error && paymentsResult.data?.length) {
-  payload.finance = paymentsResult.data.map((row: any) => ({
-    id: row.id,
-    studentName: row.student_name,
-    amount: row.amount,
-    paymentDate: row.payment_date,
-    status: row.payment_status
-  }));
-}
-}
 
     payload.dashboard.kpis = buildDashboardKpis(payload);
     payload.dashboard.feeHealth = {
