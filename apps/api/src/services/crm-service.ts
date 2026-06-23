@@ -179,15 +179,13 @@ const buildDashboardKpis = (payload: BootstrapPayload) => [
     trend: "Current active timetable",
     tone: "neutral" as const
   },
-  {
-    id: "alerts",
-    label: "Open Fee Alerts",
-    value: String(payload.alerts.length),
-    trend: `${payload.alerts.filter((alert: FeeAlert) => alert.severity === "overdue").length} overdue`,
-    tone: payload.alerts.some((alert: FeeAlert) => alert.severity === "overdue")
-      ? ("warning" as const)
-      : ("neutral" as const)
-  }
+ {
+  id: "fees",
+  label: "Pending Fees",
+  value: `₹${payload.dashboard.feeHealth.overdueTotal}`,
+  trend: "Live from database",
+  tone: "warning" as const
+}
 ];
 
 const mapStudents = (rows: StudentDirectoryRow[]): Student[] =>
@@ -280,6 +278,19 @@ export const getBootstrap = async (): Promise<BootstrapPayload> => {
 
     if (!studentsResult.error && studentsResult.data?.length) {
       payload.students = mapStudents(studentsResult.data as StudentDirectoryRow[]);
+      const feesResult = await supabase
+        .from("fee_management")
+        .select("*");
+
+        if (!feesResult.error && feesResult.data) {
+          const feesArray = feesResult.data as any[];
+          const totalDue = feesArray.reduce(
+            (sum, fee) => sum + Number(fee?.due_fee || 0),
+            0
+          );
+
+          payload.dashboard.feeHealth.overdueTotal = totalDue;
+        }
     }
 
     if (!teachersResult.error && teachersResult.data?.length) {
