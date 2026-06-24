@@ -652,6 +652,10 @@ input {
   }
 }
 
+body {
+  border: 10px solid red;
+}
+
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
