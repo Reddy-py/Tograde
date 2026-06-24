@@ -52,3 +52,7 @@ export default function Dashboard() {
     </main>
   );
 }
+
+<h1 className="text-5xl font-bold text-red-500">
+  Tailwind Working Test 🚀
+</h1>
